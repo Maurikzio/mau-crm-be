@@ -8,6 +8,10 @@ const typeDefs = `#graphql
     createdWhen: String
   }
 
+  type Token {
+    token: String
+  }
+
   input UserInput {
     name: String!
     lastname: String!
@@ -15,12 +19,18 @@ const typeDefs = `#graphql
     password: String!
   }
 
+  input AuthInput {
+    email: String!
+    password: String!
+  }
+
   type Query {
-    getBooks: String
+    getUserInfo(token: String!): User
   }
 
   type Mutation {
     newUser(input: UserInput): User #User
+    authenticateUser(input: AuthInput): Token
   }
 `
 
