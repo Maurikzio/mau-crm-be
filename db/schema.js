@@ -12,6 +12,14 @@ const typeDefs = `#graphql
     token: String
   }
 
+  type Product {
+    id: ID
+    name: String
+    stock: Int
+    price: Float
+    createdWhen: String
+  }
+
   input UserInput {
     name: String!
     lastname: String!
@@ -24,13 +32,31 @@ const typeDefs = `#graphql
     password: String!
   }
 
+  input ProductInput {
+    name: String!
+    stock: Int!
+    price: Float!
+  }
+
+
   type Query {
+    #users
     getUserInfo(token: String!): User
+
+    #products
+    getAllProducts: [Product]
+    getProductById(id: ID!): Product
   }
 
   type Mutation {
+    # Users
     newUser(input: UserInput): User #User
     authenticateUser(input: AuthInput): Token
+
+    # Products
+    createNewProduct(input: ProductInput): Product
+    updateProduct(id: ID!, input: ProductInput): Product
+    deleteProduct(id: ID!): String
   }
 `
 
