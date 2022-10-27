@@ -1,8 +1,12 @@
 // User -> tendra todos loas metodos de mongoos para insertas datos.
 import User from "../models/user.js";
 import Product from "../models/product.js";
+import Client from "../models/client.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: 'variables.env'});
 
 const createToken = (user, secretWord, expiresIn) => {
   /*1-information to store in token,  2.-Secret word, 3.-Expire time*/
@@ -32,6 +36,38 @@ const resolvers = {
       }
 
       return productInDB;
+    },
+    // los vendedores van a poder ver solo a sus clientes
+    getAllClients: async () => {
+      try {
+        const clients = await Client.find({});
+        return clients;
+      } catch (err) {
+        console.log(err);
+        throw new Error(err);
+      }
+    },
+    getClientsBySeller: async (_, {}, ctx) => {
+      try {
+        const clientsOfSeller = await Client.find({ seller: ctx.user.id.toString() });
+        return clientsOfSeller;
+      } catch (err) {
+        console.log(err);
+        throw new Error(err);
+      }
+    },
+    getClient: async (_, { id }, ctx) => {
+      //check if client exists
+      const client = await Client.findById(id);
+      if(!client) {
+        throw new Error('Client not found');
+      }
+      //check id User/Seller can access the client
+      if(client.seller.toString() !== ctx.user.id) {
+        throw new Error("You cannot access this client");
+      }
+
+      return client;
     }
   },
   // mutations sirven para crear registro, modificarlos o eliminarlos
@@ -113,6 +149,60 @@ const resolvers = {
       await Product.findOneAndDelete({ _id: id });
 
       return "Product was removed"
+    },
+    newClient: async (_, { input }, ctx) => {
+      const { email } = input;
+      //Check if client is registered using the email since it is unique
+      const clientExists = await Client.findOne({ email });
+      if(clientExists) {
+        throw new Error('Client is already registered');
+      }
+
+      const newClient = new Client(input);
+
+      //Assign a user/seller the client
+      newClient.seller = ctx.user.id;
+
+      //save in db
+      try {
+        const res = await newClient.save();
+        return res;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    updateClient: async (_, { id, input}, ctx) => {
+
+      //Check if client is registered using the email since it is unique
+      let client = await Client.findById(id);
+
+      if(!client) {
+        throw new Error('Client not found');
+      }
+
+      //check if User/seller of the client is the one that is updating.
+      if(client.seller.toString() !== ctx.user.id) {
+        throw new Error("You cannot access this client");
+      }
+
+      //save in DB
+      client = await Client.findOneAndUpdate({ _id: id}, input, { new: true });
+      return client;
+    },
+    deleteClient: async (_, { id }, ctx) => {
+      let client = await Client.findById(id);
+
+      if(!client) {
+        throw new Error('Client not found');
+      }
+
+      if(client.seller.toString() !== ctx.user.id) {
+        throw new Error("You cannot access this client");
+      }
+
+      //delete client
+      await Client.findOneAndDelete({ _id: id });
+      return "Client was deleted";
     }
   }
 };

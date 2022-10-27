@@ -20,6 +20,16 @@ const typeDefs = `#graphql
     createdWhen: String
   }
 
+  type Client {
+    id: ID
+    name: String
+    lastname:  String
+    company: String
+    email: String
+    phone: String
+    seller: ID
+  }
+
   input UserInput {
     name: String!
     lastname: String!
@@ -38,6 +48,15 @@ const typeDefs = `#graphql
     price: Float!
   }
 
+  input ClientInput {
+    name: String!
+    lastname: String!
+    company: String!
+    email: String!
+    phone: String
+  # seller: ----> no lo pasamos manualmente sino que sera el User q este autenticado y lo tomaremos del context
+  }
+
 
   type Query {
     #users
@@ -46,6 +65,11 @@ const typeDefs = `#graphql
     #products
     getAllProducts: [Product]
     getProductById(id: ID!): Product
+
+    #clients
+    getAllClients: [Client]
+    getClientsBySeller: [Client]
+    getClient(id: ID): Client
   }
 
   type Mutation {
@@ -57,6 +81,11 @@ const typeDefs = `#graphql
     createNewProduct(input: ProductInput): Product
     updateProduct(id: ID!, input: ProductInput): Product
     deleteProduct(id: ID!): String
+
+    # Client
+    newClient(input: ClientInput): Client
+    updateClient(id: ID!, input: ClientInput!): Client
+    deleteClient(id: ID!): String
   }
 `
 
