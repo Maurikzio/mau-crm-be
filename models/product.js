@@ -22,4 +22,6 @@ const ProductSchema = mongoose.Schema({
   }
 });
 
+ProductSchema.index({ name: 'text' }); // index to search Product by name
+
 export default mongoose.model("Product", ProductSchema);
