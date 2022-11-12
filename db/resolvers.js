@@ -2,6 +2,7 @@
 import User from "../models/user.js";
 import Product from "../models/product.js";
 import Client from "../models/client.js";
+import Order from "../models/order.js"
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as dotenv from 'dotenv';
@@ -68,6 +69,42 @@ const resolvers = {
       }
 
       return client;
+    },
+    getAllOrders: async () => {
+      try {
+        const orders = await Order.find({});
+        return orders;
+      } catch (err) {
+        console.log(err)
+      }
+    },
+    getOrdersBySeller: async (_, {}, ctx) => {
+      try {
+        const orders = await Order.find({ seller: ctx.user.id });
+        return orders;
+      } catch (err) {
+        console.log(err)
+      }
+    },
+    getOrder: async (_, { id }, ctx) => {
+      const order = await Order.findById(id);
+
+      // check if orders exists
+      if(!order) {
+        throw new Error("Order was not found");
+      }
+
+      // just the one who created must see the order
+      if(order.seller.toString() !==  ctx.user.id)  { // if true someone is trying to cheat :(
+        throw new Error(" Not allowed  action!")
+      }
+
+      return order;
+    },
+    getOrdersByStatus: async (_, { status }, ctx) => {
+      const orders = await Order.find({ seller: ctx.user.id, status });
+
+      return orders;
     }
   },
   // mutations sirven para crear registro, modificarlos o eliminarlos
@@ -203,6 +240,113 @@ const resolvers = {
       //delete client
       await Client.findOneAndDelete({ _id: id });
       return "Client was deleted";
+    },
+    newOrder: async (_, { input }, ctx) => {
+      const { client } = input;
+
+      //check if client exists or not
+      let clientExists = await Client.findById(client);
+
+      if(!clientExists) {
+        throw new Error('Client not found');
+      }
+
+      //check if client is associated to the seller(User)
+      if(clientExists.seller.toString() !== ctx.user.id) {
+        throw new Error("You cannot access this client");
+      }
+
+      //check the stock is available, we stop the execution and we dont save it into the DB.
+      for await (let item of input.order) {
+        const { id } = item;
+
+        // production en la base de datos
+        const product = await Product.findById(id);
+
+        // check stock
+        if(item.quantity > product.stock) {
+          throw new Error(`We dont have that much in stock`);
+        } else {
+          // restar de la cantidad disponible
+          // productio es una instancia de Product entonces podemos usar los metodos de Monoose
+          product.stock = product.stock - item.quantity;
+          await product.save();
+        }
+      }
+
+      //create a new order
+      const orderToSave =  new Order(input);
+
+      // assign a seller(User) to the order
+      orderToSave.seller = ctx.user.id;
+
+      //save into de DB
+      const result = await orderToSave.save();
+
+      return result;
+    },
+    updateOrder: async (_, { id, input }, ctx) => {
+
+      const { client } = input;
+      // check if orders exists
+      const orderExists = await Order.findById(id);
+      if(!orderExists) {
+        throw new Error("The order does not exist");
+      }
+
+      //check if client exists
+      let clientExists = await Client.findById(client);
+
+      if(!clientExists) {
+        throw new Error('Client not found');
+      }
+
+      //check if client and order belongs to seller (user)
+      if(clientExists.seller.toString() !== ctx.user.id) {
+        throw new Error("You cannot access this client");
+      }
+
+      //check stock
+      if(input.order) {
+        for await (let item of input.order) {
+          const { id } = item;
+
+          // production en la base de datos
+          const product = await Product.findById(id);
+
+          // check stock
+          if(item.quantity > product.stock) {
+            throw new Error(`We dont have that much in stock`);
+          } else {
+            // restar de la cantidad disponible
+            // productio es una instancia de Product entonces podemos usar los metodos de Monoose
+            product.stock = product.stock - item.quantity;
+            await product.save();
+          }
+        }
+      }
+
+      //save into db
+      const result = await Order.findOneAndUpdate({ _id: id}, input, { new: true });
+
+      return result;
+    },
+    deleteOrder: async (_, { id }, ctx) => {
+      //check if orders exists
+      const order = await Order.findById(id);
+      if(!order) {
+        throw new Error("Order not found")
+      }
+
+      //check if its seller is the one who wants to delete
+      if(order.seller.toString() !== ctx.user.id) {
+        throw new Error("You cannot delete this item")
+      }
+
+      //delete from db
+      await Order.findOneAndDelete({ _id: id });
+
+      return "Order was deleted"
     }
   }
 };

@@ -30,6 +30,21 @@ const typeDefs = `#graphql
     seller: ID
   }
 
+  type Order {
+    id: ID!
+    order: [OrderGroup]
+    total: Float
+    client: ID
+    seller: ID
+    createdWhen: String
+    status: OrderStatus!
+  }
+
+  type OrderGroup {
+    id: ID!
+    quantity: Int
+  }
+
   input UserInput {
     name: String!
     lastname: String!
@@ -57,6 +72,24 @@ const typeDefs = `#graphql
   # seller: ----> no lo pasamos manualmente sino que sera el User q este autenticado y lo tomaremos del context
   }
 
+  input OrderProductInput {
+    id: ID
+    quantity: Int
+  }
+
+  input OrderInput {
+    order: [OrderProductInput]
+    total: Float
+    client: ID
+    status: OrderStatus
+  }
+
+  enum OrderStatus {
+    PENDING
+    COMPLETED
+    CANCELLED
+  }
+
 
   type Query {
     #users
@@ -68,8 +101,14 @@ const typeDefs = `#graphql
 
     #clients
     getAllClients: [Client]
-    getClientsBySeller: [Client]
+    getClientsBySeller: [Client] #Seller is the current logged in user.
     getClient(id: ID): Client
+
+    #orders
+    getAllOrders: [Order]
+    getOrdersBySeller: [Order] # Seller is the current logged in user.
+    getOrder(id: ID!): Order
+    getOrdersByStatus(status: OrderStatus): [Order]
   }
 
   type Mutation {
@@ -86,6 +125,11 @@ const typeDefs = `#graphql
     newClient(input: ClientInput): Client
     updateClient(id: ID!, input: ClientInput!): Client
     deleteClient(id: ID!): String
+
+    # Orders
+    newOrder(input: OrderInput): Order
+    updateOrder(id: ID!, input: OrderInput!): Order
+    deleteOrder(id: ID!): String
   }
 `
 

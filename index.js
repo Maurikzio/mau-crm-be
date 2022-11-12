@@ -14,6 +14,11 @@ connectDB();
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  introspection: true,
+    cors: {
+      origin: "*",
+      credentials: true
+    }
 })
 
 const { url } = await startStandaloneServer(server, {
@@ -25,7 +30,6 @@ const { url } = await startStandaloneServer(server, {
         const user = jwt.verify(token, process.env.SECRET_W);
         return { user }
       } catch (err) {
-        console.log("User not found")
         throw new Error(err);
       }
     }
